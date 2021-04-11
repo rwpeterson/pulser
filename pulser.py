@@ -1,8 +1,9 @@
 from collections import namedtuple
 from nmigen import *
 from nmigen.cli import main
+from nmigen.lib.cdc import ResetSynchronizer
 from nmigen.sim import *
-from nmigen_boards.icebreaker import ICEBreakerPlatform
+from nmigen_boards.icestick import ICEStickPlatform
 import warnings
 
 
@@ -16,12 +17,12 @@ class PulseStep(Elaboratable):
 
     Attributes
     ----------
-    trigger: in
-        Input trigger
+    en: in
+        Enable
     input: in
         Input state
     output: out
-        Output state, follows input before trigger, but is then negated
+        Output state, buffered before countdown, inverted after
     done: out
         End status chainable to next input trigger
 
@@ -29,15 +30,17 @@ class PulseStep(Elaboratable):
     --------
     ```
            +--------------------+     +--------------------+
-    i  --> | input->[~]->output | --> | input->[~]->output | --> pulse_out
+    0  --> | input->[~]->output | --> | input->[~]->output | --> pulse_out
            |         ^          |     |         ^          |
            |  dur_0  |          |     |  dur_1  |          |
     1  --> | !{ctr}->?--> done  | --> | !{ctr}->?--> done  | --> _
            +--------------------+     +--------------------+
     ```
-    Starting from an initial state i, the state of pulse_out is toggled every
+    Starting from an initial state 0, the state of pulse_out is toggled every
     dur_j cycles by subsequent chained PulseStep instances. The (j+1)st
     instance is started via the jth instance setting done to high when ctr = -1
+    Chaining these allows a (nearly) arbitrary binary output pulse sequence,
+    except that the initial delay is a minimum of 1 cycle.
     """
 
     def __init__(self, duration):
@@ -57,43 +60,39 @@ class PulseStep(Elaboratable):
     def elaborate(self, platform):
         # It seems cheap on FPGAs to only check one bit of a number instead of
         # some arbitrary value, so loops often count down and terminate at -1,
-        # where you can just monitor the MSB of a signed signal.
+        # where you can just monitor the MSB of a signed signal to check if
+        # it is negative.
 
         # We can use a range() to set the signal's shape automatically
         ctr = Signal(range(-1, self.duration - 1), reset=(self.duration - 2))
 
         m = Module()
 
-        # Enabled
+        # input ^ done inverts the output once done is hi
+        m.d.comb += [
+            self.output.eq(self.input ^ self.done),
+        ]
+
         with m.If(self.en):
             # Finished counting
             with m.If(ctr[-1]):
-                # Toggle output and set done
+                # Set done, toggling output
                 with m.If(~(self.done)):
-                    m.d.comb += [
+                    m.d.sync += [
                         # Indicate done
                         self.done.eq(1),
                     ]
-                # Always invert (final state)
-                m.d.comb += [
-                    # Invert input
-                    self.output.eq(~self.input),
-                ]
             # Still counting
             with m.Else():
                 m.d.sync += [
                     # Decrement counter
                     ctr.eq(ctr - 1),
                 ]
-                m.d.comb += [
-                    # Keep buffering input
-                    self.output.eq(self.input)
-                ]
-        # Disabled
         with m.Else():
-            # Buffer input
-            m.d.comb += [
-                self.output.eq(self.input),
+            # Continuously reset if disabled
+            m.d.sync += [
+                ctr.eq(self.duration - 2),
+                self.done.eq(0),
             ]
 
         return m
@@ -176,7 +175,7 @@ class PLL(Elaboratable):
             o_LOCK=pll_lock
             )
 
-        rs = ResetSynchronizer(~(self.pll_lock), domain=self.domain_name)
+        rs = ResetSynchronizer(~pll_lock, domain=self.domain_name)
 
         m = Module()
 
@@ -188,89 +187,153 @@ class PLL(Elaboratable):
         return m
 
 
-class Top(Elaboratable):
-    def elaborate(self, platform):
-        # You apparently really needs the dir='-' thing
-        clk_pin = platform.request(platform.default_clk, dir='-')
+class Trigger(Elaboratable):
+    """Monitor input for a hi streak meeting a threshold count to trigger on.
 
-        led = platform.request('user_led', 0)
+    Parameters
+    ----------
+    count: int
+        Number of successive hi inputs to count as a trigger. Will trigger on
+        count sequential cycles of hi input, allowing lo cycles if cancelled
+        by corresponding extra hi cycles.
+    block: int
+        Period to hold the trigger output hi. Input events are ignored during
+        this time.
 
-        m = Module()
-        pll = PLL(12, 204)
+    Attributes
+    ----------
+    input: in
+        Signal to monitor for trigger event.
+    output: out
+        Signal to set hi for trigger events.
 
-        # Override default sync domain
-        m.domains += pll.domain
+    Notes
+    -----
+    Trigger methodology allows for either a straight run of hi inputs, or a
+    "one step backwards, one step forwards" extension if lo cycles occur.
+    For example, if count = 5, this will trigger on 11111, but also 110111011.
 
-        p1 = PulseStep(204000000)
-        p2 = PulseStep(204000000)
-        p3 = PulseStep(204000000)
+    The output hi time and the block time are the same.
+    """
+    def __init__(self, count, block):
+        self.count = count
+        self.block = block
+        self.input = Signal()
+        self.output = Signal()
 
-        m.submodules += [p1, p2, p3]
-
-        m.d.comb += [
-            pll.clk_pin.eq(clk_pin),
-            p1.input.eq(True),
-            p1.trigger.eq(True),
-            p2.input.eq(p1.output),
-            p2.trigger.eq(p1.done),
-            p3.input.eq(p2.output),
-            p3.trigger.eq(p2.done),
-            led.eq(p3.output),
+        self.ports = [
+            self.input,
+            self.output,
         ]
 
-        if platform is not None:
-            pass
+    def elaborate(self, platform):
+        m = Module()
+
+        count_max = self.count - 2
+        ctr = Signal(range(-1, self.count - 1), reset=count_max)
+
+        trig_max = self.block - 2
+        trig_ctr = Signal(range(-1, self.block - 1), reset=trig_max)
+
+        with m.If(~self.output):
+            with m.If(self.input):
+                with m.If(ctr[-1]):
+                    # trigger event
+                    self.output.eq(1)
+                    ctr.eq(count_max)
+                with m.Else():
+                    # decrement while input hi
+                    ctr.eq(ctr - 1)
+            with m.Else():
+                with m.If(ctr < count_max):
+                    # increment to max while input lo
+                    ctr.eq(ctr + 1)
+        with m.Else():
+            with m.If(trig_ctr[-1]):
+                # trigger finished, allow new trigger
+                self.output.eq(0)
+                trig_ctr.eq(trig_max)
+            with m.Else():
+                # count down trigger
+                trig_ctr.eq(trig_ctr - 1)
 
         return m
 
 
-class PulserSim(Elaboratable):
+class Top(Elaboratable):
     def __init__(self):
-        self.start = Signal(reset=1)
-        self.enable = Signal(reset=1)
-        self.status = Signal()
-        self.wat = Signal()
+        self.start = Signal()
+        self.enable = Signal()
 
     def elaborate(self, platform):
         m = Module()
 
-        p1 = PulseStep(5)
-        p2 = PulseStep(5)
-        p3 = PulseStep(5)
+        # You apparently really needs the dir='-' thing
+        clk_pin = platform.request(platform.default_clk, dir='-')
+        pll = PLL(12, 204)
+
+        led = platform.request('led', 0)
+        led1 = platform.request('led', 1)
+        led2 = platform.request('led', 2)
+        led3 = platform.request('led', 3)
+        off = Const(0)
+
+        # Override default sync domain
+        m.domains += pll.domain
+
+        # Example pulse train
+        p1 = PulseStep(1)
+        p2 = PulseStep(204_000_000)  # HI
+        p3 = PulseStep(204_000_000)
+        p4 = PulseStep(204_000_000)  # HI
+
+        # Trigger to start pulse train
+        t = Trigger(1, 2_000_000_000)
 
         m.submodules += [
+            pll,
+            t,
             p1,
             p2,
             p3,
+            p4,
         ]
 
-        m.d.combs += [
+        m.d.comb += [
+            pll.clk_pin.eq(clk_pin),
+            t.input.eq(1),
             p1.input.eq(self.start),
-            p1.en.eq(self.enable),
+            p1.en.eq(t.output),
             p2.input.eq(p1.output),
             p2.en.eq(p1.done),
             p3.input.eq(p2.output),
             p3.en.eq(p2.done),
-            self.status.eq(p3.output),
-            self.wat.eq(p3.done),
+            p4.input.eq(p3.output),
+            p4.en.eq(p3.done),
+            led.eq(p4.output),
+
+            led1.eq(off),
+            led2.eq(off),
+            led3.eq(off),
         ]
 
         return m
 
 
 if __name__ == '__main__':
-    #platform = ICEBreakerPlatform()
-    #platform.build(Top(), do_program=True)
+    platform = ICEStickPlatform()
+    platform.build(Top(), do_program=True)
 
-    dut = PulserSim()
-    def bench():
-        # Set starting values
-        yield dut.enable.eq(1)
-        yield dut.start.eq(1)
-        yield Settle()
+    #dut = Top()
+    #def bench():
+    #    # Run a few cycles
+    #    for _ in range(3):
+    #        yield
+    #    # Start the pulse event
+    #    yield dut.enable.eq(1)
 
-    sim = Simulator(dut)
-    sim.add_clock(1e-6, domain="sync")
-    sim.add_sync_process(bench)
-    with sim.write_vcd("pulser.vcd"):
-        sim.run()
+    #sim = Simulator(dut)
+    #sim.add_clock(4.9e-9, domain="sync")
+    #sim.add_sync_process(bench)
+    #with sim.write_vcd("pulser.vcd"):
+    #    sim.run_until(2e-7, run_passive=True)
