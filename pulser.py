@@ -80,4 +80,4 @@ class Top(Elaboratable):
 
 if __name__ == '__main__':
     platform = ICEStickPlatform()
-    platform.build(Top(), do_program=True)
+    platform.build(Top(), do_program=False)
