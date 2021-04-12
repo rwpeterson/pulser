@@ -2,6 +2,7 @@ from nmigen import *
 from nmigen.lib.cdc import ResetSynchronizer
 from nmigen.cli import main
 from nmigen.sim import *
+from collections import namedtuple
 import warnings
         
 class PLL(Elaboratable):

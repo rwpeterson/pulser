@@ -5,6 +5,12 @@ from nmigen.sim import *
 from nmigen_boards.icestick import ICEStickPlatform
 import warnings
 
+import sys
+sys.path.append(".")
+from lib.pulsestep import PulseStep
+from lib.pll import PLL
+from lib.trigger import Trigger
+
 
 class Top(Elaboratable):
     def __init__(self):
@@ -49,15 +55,19 @@ class Top(Elaboratable):
 
         m.d.comb += [
             pll.clk_pin.eq(clk_pin),
-            t.input.eq(1),
+            t.trig_in.eq(1),
             p1.input.eq(self.start),
-            p1.en.eq(t.output),
+            p1.prev.eq(t.trigger),
+            p1.en.eq(t.trigger),
             p2.input.eq(p1.output),
-            p2.en.eq(p1.done),
+            p2.prev.eq(p1.next),
+            p2.en.eq(t.trigger),
             p3.input.eq(p2.output),
-            p3.en.eq(p2.done),
+            p3.prev.eq(p2.next),
+            p3.en.eq(t.trigger),
             p4.input.eq(p3.output),
-            p4.en.eq(p3.done),
+            p4.prev.eq(p3.next),
+            p4.en.eq(t.trigger),
             led.eq(p4.output),
 
             led1.eq(off),
