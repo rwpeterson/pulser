@@ -1,4 +1,4 @@
 #!/bin/sh
 export NEXTPNR_ICE40=yowasp-nextpnr-ice40
 export ICEPACK=yowasp-icepack
-python3 pulser.py
+python3 $1
