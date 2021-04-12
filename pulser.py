@@ -19,6 +19,8 @@ class Top(Elaboratable):
         pll = PLL(12, 204)
 
         led = platform.request('led', 0)
+
+        # Define the rest of them to force them off
         led1 = platform.request('led', 1)
         led2 = platform.request('led', 2)
         led3 = platform.request('led', 3)
@@ -69,17 +71,3 @@ class Top(Elaboratable):
 if __name__ == '__main__':
     platform = ICEStickPlatform()
     platform.build(Top(), do_program=True)
-
-    #dut = Top()
-    #def bench():
-    #    # Run a few cycles
-    #    for _ in range(3):
-    #        yield
-    #    # Start the pulse event
-    #    yield dut.enable.eq(1)
-
-    #sim = Simulator(dut)
-    #sim.add_clock(4.9e-9, domain="sync")
-    #sim.add_sync_process(bench)
-    #with sim.write_vcd("pulser.vcd"):
-    #    sim.run_until(2e-7, run_passive=True)
