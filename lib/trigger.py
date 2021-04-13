@@ -3,7 +3,7 @@ from nmigen.cli import main
 from nmigen.sim import *
 
 class Trigger(Elaboratable):
-    """Monitor input for a hi streak meeting a threshold count to trigger on.
+    """Monitor input for a high streak meeting a threshold count to trigger on.
 
     Parameters
     ----------
@@ -20,7 +20,7 @@ class Trigger(Elaboratable):
     trig_in: in
         Signal to monitor for trigger event.
     trigger: out
-        Signal to set hi for trigger events.
+        Signal to set high for trigger events.
 
     Notes
     -----

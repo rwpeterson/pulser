@@ -33,7 +33,7 @@ have yosys, nextpnr, and icestorm tools installed locally. If you are using the
 `yowasp-`. To use these, environment variables need to be set. The included
 `yowasp-run` script does this for you, so instead of typing
 
-    NEXTPNR_ICE40=yowasp-nextpnr-ice40 ICEPACK=yowasp-icepack python3 lib/pulsestep.py
+    YOSYS=yowasp-yosys NEXTPNR_ICE40=yowasp-nextpnr-ice40 ICEPACK=yowasp-icepack python3 lib/pulsestep.py
 
 you can simply type
 
@@ -127,20 +127,23 @@ After running the simulation, `pulsestep.vcd` file looks something like this in
 GTKWave:
 ```
 clk ‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_
+
 trg ____‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾__________________‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+
 out ______‾‾‾‾______‾‾‾‾‾‾‾‾__________________________‾‾‾‾______‾‾‾‾‾‾‾‾______
 ```
-We see that the delays from the trigger rise and between subsequent output
-transitions are 1, 2, 3, and 4 cycles. Great!
+We see that the delays from the trigger rise to subsequent output
+transitions are 1, 2, 3, and 4 cycles, and that it resets and runs a second
+time. Great!
 
 ### `Trigger(count, block)`
 
 This is meant to trigger on slightly noisy, real-world signals. It does this by
-setting a number of high cycles needed to trigger. It will trigger on count
+setting a number of high cycles needed to trigger. It will trigger on `count`
 consecutive high cycles, but will also tolerate occasional low cycles in a
 series. For example, if `count == 5`, it will trigger on `11111`, but also on
 `111011011`, where each `0` is made up for with an extra `1`. After triggering,
-it will hold the output trigger high for block cycles.
+it will hold the output trigger high for `block` cycles.
 
 ### `PLL(freq_in, freq_out)`
 
