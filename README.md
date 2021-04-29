@@ -2,10 +2,19 @@
 
 Pulse generator for the IceStick FPGA eval board designed using nmigen.
 
-## Running
+## Overview
 
-In general, you need the development version of [nmigen][n]. The easiest way
-to get started is to use `pip3`.
+`pulser` is a set of nmigen modules and a script to dynamically generate
+gateware implementing the specified pulse sequence. The FPGA is reflashed
+every time you want to change the sequence, which takes around ten seconds
+from script execution to operation.
+
+## Installing
+
+### nmigen
+
+You need the development version of [nmigen][n]. The easiest way
+to get started is to use `pip`.
 
 Either install directly using `pip3`:
 
@@ -19,30 +28,73 @@ Or clone the repo and build locally:
 
 Make sure to update it periodically!
 
+### yosys
+
+Yosys is the open-source toolchain used to synthesize the design. It may
+be packaged for your distribution (check the version!), but the most
+foolproof way is to install via the [YoWASP][y] package. It uses `pip` to
+install versions of the tools compiled to WebAssembly. They will take longer
+to run the first time as they compile, and are slightly slower than native
+builds, but are cross-platform and easy to get.
+
+If you are using YoWASP, the binaries will be prepended with `yowasp-`.
+For nmigen to find them, environment variables need to be set. Without
+doing anything, you would need to type:
+
+    YOSYS=yowasp-yosys NEXTPNR_ICE40=yowasp-nextpnr-ice40 ICEPACK=yowasp-icepack python3 -m pulser 1 1 1 1
+
+You can set them by default in your shell's rc file, or you can use the
+included `yowasp-env` script that sets the variables for you, and `exec`s
+into the following command:
+
+    ./yowasp-env python3 -m pulser 1 1 1 1
+
+TODO: a Windows batch file to do this.
+
+### gtkwave (simulation only)
+
 You will also need GTKWave if you want to view the generated `.vcd`
-waveforms from the simulation test benches.
+waveforms from the simulation test benches. This is optional.
 
 The libraries in `lib/` all have an example testbench that will be simulated
 when you run them directly:
 
-    python3 lib/pulsestep.py
+    python3 pulser/lib/pulsestep.py
 
-This will write `pulsestep.vcd` to the current directory. This assumes that you
-have yosys, nextpnr, and icestorm tools installed locally. If you are using the
-[YoWASP][y] distribution of these tools, the binaries will be prepended with
-`yowasp-`. To use these, environment variables need to be set. The included
-`yowasp-run` script does this for you, so instead of typing
-
-    YOSYS=yowasp-yosys NEXTPNR_ICE40=yowasp-nextpnr-ice40 ICEPACK=yowasp-icepack python3 lib/pulsestep.py
-
-you can simply type
-
-    yowasp-run lib/pulsestep.py
+This will write `pulsestep.vcd` to the current directory, which you can view
+in gtkwave.
 
 [n]: https://github.com/nmigen/nmigen
 [y]: http://yowasp.org
 
+## Running the script
+
+The easiest way to use `pulser` is to run it as a script, which you can do
+without installing it just by being in the project directory:
+
+    cd pulser
+    python3 -m pulser -h
+
+This will show the help text. To set the clock to 204 MHz and program a pulse
+sequence with an initial delay of 1 cycle (the minimum possible), a 10 cycle
+pulse length, then a break of 25 cycles, and finally a second pulse of 15
+cycles, we specify the following. Let's assume for fun that we are using
+YoWASP, so we need to run `yowasp-env` at the beginning, too:
+
+    ./yowasp-env python3 -m pulse -f 204 1 10 25 15
+
+The script will create a `build` directory containing build artifacts,
+and `pulser.bin`. This is what you want to flash the FPGA with. YoWASP
+doesn't distribute `iceprog`, but a copy is in [fpga-binutils][f] (check
+the prebuilt binaries). You can have the script automatically flash the FPGA
+when it's done synthesizing by passing the `-u` flag.
+
+[f]: https://github.com/sylefeb/fpga-binutils
+
 ## Modules
+
+This is an under-the-hood look at the design. The pulser script is just one
+design built out of these primitives, and it's easy to make your own.
 
 ### `PulseStep(duration)`
 
