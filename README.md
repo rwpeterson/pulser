@@ -7,20 +7,20 @@ Pulse generator for the IceStick FPGA eval board designed using nmigen.
 In general, you need the development version of [nmigen][n]. The easiest way
 to get started is to use `pip3`.
 
-Either clone the repo and build locally:
+Either install directly using `pip3`:
+
+    pip3 install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen'
+
+Or clone the repo and build locally:
 
     git clone https://github.com/nmigen/nmigen
     cd nmigen
     pip3 install --user -e .
 
-Or install directly from the remote using `pip3`:
-
-    pip3 install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen'
-
 Make sure to update it periodically!
 
-You will also need GTKWave to view the generated `.vcd` waveforms from the
-simulation test benches.
+You will also need GTKWave if you want to view the generated `.vcd`
+waveforms from the simulation test benches.
 
 The libraries in `lib/` all have an example testbench that will be simulated
 when you run them directly:
@@ -42,14 +42,12 @@ you can simply type
 [n]: https://github.com/nmigen/nmigen
 [y]: http://yowasp.org
 
-
-
 ## Modules
 
 ### `PulseStep(duration)`
 
 This is a chained primitive to describe pulse transitions, toggling the state of
-a signal after duration cycles have elapsed, and outputting a second chainable
+a signal after `duration` cycles have elapsed, and outputting a second chainable
 signal to start the next PulseStep instance. A two-pulse output would have four
 `PulseStep` instances, one to set the rising edge of the first pulse after
 a minimum delay of one cycle from the initial trigger rising edge, a second to
@@ -95,7 +93,9 @@ class Top(Elaboratable):
         ]
         return m
 ```
+
 We can write the following testbench
+
 ```python
 dut = Top()
 def bench():
@@ -123,8 +123,10 @@ sim.add_sync_process(bench)
 with sim.write_vcd("pulsestep.vcd"):
     sim.run_until(40e-6, run_passive=True)
 ```
+
 After running the simulation, `pulsestep.vcd` file looks something like this in
 GTKWave:
+
 ```
 clk ‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_‾_
 
@@ -132,18 +134,15 @@ trg ____‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 out ______‾‾‾‾______‾‾‾‾‾‾‾‾__________________________‾‾‾‾______‾‾‾‾‾‾‾‾______
 ```
+
 We see that the delays from the trigger rise to subsequent output
 transitions are 1, 2, 3, and 4 cycles, and that it resets and runs a second
 time. Great!
 
-### `Trigger(count, block)`
+### `Trigger(block)`
 
-This is meant to trigger on slightly noisy, real-world signals. It does this by
-setting a number of high cycles needed to trigger. It will trigger on `count`
-consecutive high cycles, but will also tolerate occasional low cycles in a
-series. For example, if `count == 5`, it will trigger on `11111`, but also on
-`111011011`, where each `0` is made up for with an extra `1`. After triggering,
-it will hold the output trigger high for `block` cycles.
+This triggers on a rising edge of the input signal, holding the output trigger
+high for `block` cycles, during which it ignores the input.
 
 ### `PLL(freq_in, freq_out)`
 
