@@ -3,14 +3,10 @@ from nmigen.cli import main
 from nmigen.sim import *
 
 class Trigger(Elaboratable):
-    """Monitor input for a high streak meeting a threshold count to trigger on.
+    """Monitor input for a rising edge.
 
     Parameters
     ----------
-    count: int
-        Number of high inputs to count as a trigger event. Will trigger on
-        count sequential cycles of high input, or any series of (count + M)
-        cycles where (count + M / 2) are high.
     block: int
         Period to hold the trigger output high. Input events are ignored during
         this time.
@@ -20,18 +16,9 @@ class Trigger(Elaboratable):
     trig_in: in
         Signal to monitor for trigger event.
     trigger: out
-        Signal to set high for trigger events.
-
-    Notes
-    -----
-    Trigger's logic allows for either a straight run of high input cycles, or a
-    "one step backwards, one step forwards" extension if low cycles occur.
-    For example, if count = 5, this will trigger on 11111, but also 110111011,
-    since each low cycle is balanced with an additional high cycle. Once
-    triggered, trigger will be held high for block cycles regardless of input.
+        Signal to set hi for trigger events.
     """
-    def __init__(self, count, block):
-        self.count = count
+    def __init__(self, block):
         self.block = block
         self.trig_in = Signal()
         self.trigger = Signal()
@@ -44,32 +31,27 @@ class Trigger(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        count_max = self.count - 2
-        ctr = Signal(range(-1, self.count - 1), reset=count_max)
+        state = Signal()
+        cur = Signal()
+        lst = Signal()
 
         trig_max = self.block - 2
         trig_ctr = Signal(range(-1, self.block - 1), reset=trig_max)
 
+        # When not triggered, monitor input
         with m.If(~self.trigger):
-            with m.If(self.trig_in):
-                with m.If(ctr[-1]):
-                    m.d.sync +=[
-                        # trigger event
-                        self.trigger.eq(1),
-                        # reset ctr
-                        ctr.eq(count_max),
-                    ]
-                with m.Else():
-                    # count down for every high input
-                    m.d.sync += [
-                        ctr.eq(ctr - 1),
-                    ]
-            with m.Else():
-                with m.If(ctr < count_max):
-                    # count up for every low input
-                    m.d.sync += [
-                        ctr.eq(ctr + 1),
-                    ]
+            # Monitor current and last input states
+            m.d.sync += [
+                lst = cur,
+                cur = self.trig_in,
+            ]
+            # Check for rising edge
+            with m.If((cur & 1) & (lst & 0)):
+                m.d.sync +=[
+                    # trigger event
+                    self.trigger.eq(1),
+                ]
+        # When triggered:
         with m.Else():
             with m.If(trig_ctr[-1]):
                 # trigger finished, allow new trigger
@@ -100,7 +82,7 @@ if __name__ == '__main__':
         def elaborate(self, platform):
             m = Module()
 
-            t = Trigger(3, 5)
+            t = Trigger(3)
 
             m.submodules += [
                 t,
