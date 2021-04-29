@@ -1,5 +1,6 @@
 from collections import namedtuple
 from nmigen import *
+from nmigen.build import Resource, Pins
 from nmigen.cli import main
 from nmigen.sim import *
 from nmigen_boards.icestick import ICEStickPlatform
@@ -22,9 +23,18 @@ class Top(Elaboratable):
 
         # You apparently really needs the dir='-' thing
         clk_pin = platform.request(platform.default_clk, dir='-')
-        pll = PLL(12, 204)
+
+        freq_out = 204
+        pll = PLL(12, freq_out)
 
         led = platform.request('led', 0)
+
+        platform.add_resources([
+            Resource("pin0", 0, Pins("1", dir="i", conn=("pmod", 0))),
+            Resource("pin1", 0, Pins("2", dir="o", conn=("pmod", 0))),
+        ])
+        con0 = platform.request("pin0", 0)
+        con1 = platform.request("pin1", 0)
 
         # Define the rest of them to force them off
         led1 = platform.request('led', 1)
@@ -35,14 +45,21 @@ class Top(Elaboratable):
         # Override default sync domain
         m.domains += pll.domain
 
+        tstep = 1 / (freq_out * 1e6)
+
+        def t2c(t):
+            return int(t/tstep)
+
         # Example pulse train
         p1 = PulseStep(1)
-        p2 = PulseStep(204_000_000)  # HI
-        p3 = PulseStep(204_000_000)
-        p4 = PulseStep(204_000_000)  # HI
+        p2 = PulseStep(t2c(15e-9))  # HI
+        p3 = PulseStep(t2c(15e-9))
+        p4 = PulseStep(t2c(15e-9))  # HI
+        p5 = PulseStep(t2c(15e-9))
+        p6 = PulseStep(t2c(15e-9))  # HI
 
         # Trigger to start pulse train
-        t = Trigger(1, 2_000_000_000)
+        t = Trigger(t2c(400e-9))
 
         m.submodules += [
             pll,
@@ -51,11 +68,13 @@ class Top(Elaboratable):
             p2,
             p3,
             p4,
+            p5,
+            p6,
         ]
 
         m.d.comb += [
             pll.clk_pin.eq(clk_pin),
-            t.trig_in.eq(1),
+            t.trig_in.eq(con0),
             p1.input.eq(self.start),
             p1.prev.eq(t.trigger),
             p1.en.eq(t.trigger),
@@ -68,8 +87,15 @@ class Top(Elaboratable):
             p4.input.eq(p3.output),
             p4.prev.eq(p3.next),
             p4.en.eq(t.trigger),
-            led.eq(p4.output),
+            p5.input.eq(p4.output),
+            p5.prev.eq(p4.next),
+            p5.en.eq(t.trigger),
+            p6.input.eq(p5.output),
+            p6.prev.eq(p5.next),
+            p6.en.eq(t.trigger),
+            con1.eq(p6.output),
 
+            led.eq(off),
             led1.eq(off),
             led2.eq(off),
             led3.eq(off),
