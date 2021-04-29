@@ -32,7 +32,6 @@ class Trigger(Elaboratable):
         m = Module()
 
         state = Signal()
-        cur = Signal()
         lst = Signal()
 
         trig_max = self.block - 2
@@ -42,12 +41,11 @@ class Trigger(Elaboratable):
         with m.If(~self.trigger):
             # Monitor current and last input states
             m.d.sync += [
-                lst = cur,
-                cur = self.trig_in,
+                lst.eq(self.trig_in),
             ]
             # Check for rising edge
-            with m.If((cur & 1) & (lst & 0)):
-                m.d.sync +=[
+            with m.If((self.trig_in == 1) & (lst == 0)):
+                m.d.sync += [
                     # trigger event
                     self.trigger.eq(1),
                 ]
