@@ -4,6 +4,7 @@ from nmigen.build import Resource, Pins
 from nmigen_boards.icestick import ICEStickPlatform
 import getopt
 import sys
+import os
 
 from .lib.pulsestep import PulseStep
 from .lib.pll import PLL
@@ -11,7 +12,7 @@ from .lib.trigger import Trigger
 
 
 def usage():
-    print("pulser [ -f freq | -p period] [-nu] t1 t2 ...")
+    print("pulser [ -f freq | -p period] [-nuy] t1 t2 ...")
     print("")
     print("OPTIONS:")
     print("  -f  Clock frequency in MHz (16 - 275) [default: 60]")
@@ -20,6 +21,7 @@ def usage():
     print("  -p  Clock period in ns (~ 3.6 - 62.5)")
     print("  -u  Upload to the FPGA [default: false]")
     print("  -v  Version")
+    print("  -y  Set yowasp environment variables")
     print("")
     print("For -p and -n, beware integer division")
     print("")
@@ -39,7 +41,7 @@ def version():
 if __name__ == '__main__':
     args = sys.argv[1:]
     try:
-        optlist, args = getopt.getopt(args, "f:hnp:uv")
+        optlist, args = getopt.getopt(args, "f:hnp:uvy")
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -48,6 +50,7 @@ if __name__ == '__main__':
     fdef = False
     nsunit = False
     upload = False
+    yowasp = False
     for o, a in optlist:
         if o == '-v':
             version()
@@ -59,6 +62,8 @@ if __name__ == '__main__':
             nsunit = True
         elif o == '-u':
             upload = True
+        elif o == '-y':
+            yowasp = True
         elif o == '-f':
             if fdef:
                 print("Specify only -f or -p")
@@ -89,6 +94,11 @@ if __name__ == '__main__':
             # Number of clock periods directly
             times.append(int(arg))
 
+    if yowasp:
+        e = os.environ
+        e["YOSYS"] = "yowasp-yosys"
+        e["NEXTPNR_ICE40"] = "yowasp-nextpnr-ice40"
+        e["ICEPACK"] = "yowasp-icepack"
 
     class Pulser(Elaboratable):
         def __init__(self):

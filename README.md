@@ -16,7 +16,7 @@ from script execution to operation.
 You need the development version of [nmigen][n]. The easiest way
 to get started is to use `pip`.
 
-Either install directly using `pip3`:
+Either install directly using `pip`:
 
     pip3 install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen'
 
@@ -27,6 +27,15 @@ Or clone the repo and build locally:
     pip3 install --user -e .
 
 Make sure to update it periodically!
+
+### nmigen-boards
+
+Board-specific platform information (like which pins are mapped to I/O,
+LEDs, etc.) is contributed by the community and packaged as a separate
+module, [nmigen-boards][nb]. For our purposes, we do not need the latest
+version, so we can install the last [release][nbp]:
+
+    pip3 install nmigen-boards
 
 ### yosys
 
@@ -43,13 +52,21 @@ doing anything, you would need to type:
 
     YOSYS=yowasp-yosys NEXTPNR_ICE40=yowasp-nextpnr-ice40 ICEPACK=yowasp-icepack python3 -m pulser 1 1 1 1
 
-You can set them by default in your shell's rc file, or you can use the
-included `yowasp-env` script that sets the variables for you, and `exec`s
-into the following command:
+You have three options (laziest first):
+
+1. You can invoke `pulser` with the -y flag, which automatically sets them:
+
+    python3 -m pulser -y 1 1 1 1
+
+2. You can use the `yowasp-env` script on POSIX systems to set the envvars and `exec` into the next command:
 
     ./yowasp-env python3 -m pulser 1 1 1 1
 
-TODO: a Windows batch file to do this.
+   This is necessary for running the simulations, as they don't support `-y` (or any other flags):
+
+    ./yowasp-env python3 pulser/lib/pulsestep.py
+
+3. You can set these envvars in your shell's rc file
 
 ### gtkwave (simulation only)
 
@@ -65,6 +82,8 @@ This will write `pulsestep.vcd` to the current directory, which you can view
 in gtkwave.
 
 [n]: https://github.com/nmigen/nmigen
+[nb]: https://github.com/nmigen/nmigen-boards
+[nbp]: https://pypi.org/project/nmigen-boards/
 [y]: http://yowasp.org
 
 ## Running the script
@@ -79,9 +98,9 @@ This will show the help text. To set the clock to 204 MHz and program a pulse
 sequence with an initial delay of 1 cycle (the minimum possible), a 10 cycle
 pulse length, then a break of 25 cycles, and finally a second pulse of 15
 cycles, we specify the following. Let's assume for fun that we are using
-YoWASP, so we need to run `yowasp-env` at the beginning, too:
+YoWASP, so we pass the `-y` flag too:
 
-    ./yowasp-env python3 -m pulse -f 204 1 10 25 15
+    python3 -m pulse -f 204 -y 1 10 25 15
 
 The script will create a `build` directory containing build artifacts,
 and `pulser.bin`. This is what you want to flash the FPGA with. YoWASP
