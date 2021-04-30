@@ -68,6 +68,17 @@ You have three options (laziest first):
 
 3. You can set these envvars in your shell's rc file
 
+#### Yosys under Windows
+
+YoWASP works perfectly well on Windows, and is the easiest way to
+install yosys. However, it's missing the `iceprog` programmer that
+actually programs the FPGA. You can use a different program to flash the
+`.bin` file, or use the [fpga-binutils][f] package to provide `iceprog`.
+Download the latest prebuilt binaries, extract the folder somewhere, and
+add `C:\path\to\fpga-binutils-64\mingw64\bin` folder to your `PATH`
+environment variable. You may also need to use the Zadig tool with the
+IceStick plugged in to switch the driver from WinUSB to libusbK.
+
 ### gtkwave (simulation only)
 
 You will also need GTKWave if you want to view the generated `.vcd`
@@ -85,6 +96,7 @@ in gtkwave.
 [nb]: https://github.com/nmigen/nmigen-boards
 [nbp]: https://pypi.org/project/nmigen-boards/
 [y]: http://yowasp.org
+[f]: https://github.com/sylefeb/fpga-binutils
 
 ## Running the script
 
@@ -108,7 +120,6 @@ doesn't distribute `iceprog`, but a copy is in [fpga-binutils][f] (check
 the prebuilt binaries). You can have the script automatically flash the FPGA
 when it's done synthesizing by passing the `-u` flag.
 
-[f]: https://github.com/sylefeb/fpga-binutils
 
 ## Modules
 
