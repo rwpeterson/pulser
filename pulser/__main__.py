@@ -138,7 +138,10 @@ if __name__ == '__main__':
                 p.append(PulseStep(time))
 
             # Trigger to start pulse train
-            t = Trigger(sum(times))
+            # If the trigger is not slightly longer than the pulse sequence,
+            # for certain sequences it will sometimes miss the pulse
+            # Example: `python -m pulser -f 100 1 99 99 95` at a40a6e5d
+            t = Trigger(sum(times) + 1)
 
             m.submodules += [
                 pll,
