@@ -138,10 +138,20 @@ if __name__ == '__main__':
                 p.append(PulseStep(time))
 
             # Trigger to start pulse train
-            # If the trigger is not slightly longer than the pulse sequence,
-            # for certain sequences it will sometimes miss the pulse
-            # Example: `python -m pulser -f 100 1 99 99 95` at a40a6e5d
-            t = Trigger(sum(times) + 1)
+            """If the trigger is not slightly longer than the pulse sequence,
+            for certain sequences it will sometimes miss the pulse
+
+            Example extra padding to reproduce this error:
+
+            extra = 0:  `python -m pulser -f 100 1 99 99 95` at 28d48ffb
+            extra = 1:  `python -m pulser -f 204 1 10 10 10` at e9a914ad
+            extra = 11: `python -m pulser -f 204 1 1 1 1` at e9a914ad
+
+            If your repetition rate is critical and you cannot tolerate the
+            extra 12 cycles at the end, you can manually edit this and check
+            the specific pulse sequences on an oscilloscope.
+            """
+            t = Trigger(sum(times) + 12)
 
             m.submodules += [
                 pll,
