@@ -77,7 +77,7 @@ if __name__ == '__main__':
                 sys.exit(2)
             else:
                 fdef = True
-                freq = 1.0 / int(a)
+                freq = int(1.0e3 / float(a))
         else:
             print("unhandled option")
             sys.exit(2)
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     for arg in args:
         if nsunit:
             # Number of clock periods this time takes
-            times.append(int(arg / freq))
+            times.append(int(float(arg) / freq))
         else:
             # Number of clock periods directly
             times.append(int(arg))
