@@ -1,16 +1,17 @@
 from collections import namedtuple
-from nmigen import *
-from nmigen.build import Resource, Pins
-from nmigen.cli import main
-from nmigen.sim import *
-from nmigen_boards.icestick import ICEStickPlatform
+from amaranth import *
+from amaranth.build import Resource, Pins
+from amaranth.cli import main
+from amaranth.sim import *
+from amaranth_boards.icestick import ICEStickPlatform
 import warnings
 
 import sys
+# works if run from repo root
 sys.path.append(".")
-from lib.pulsestep import PulseStep
-from lib.pll import PLL
-from lib.trigger import Trigger
+# works if run from examples dir
+sys.path.append("..")
+from pulser import PulseStep, PLL, Trigger
 
 
 class Top(Elaboratable):
@@ -52,14 +53,14 @@ class Top(Elaboratable):
 
         # Example pulse train
         p1 = PulseStep(1)
-        p2 = PulseStep(t2c(15e-9))  # HI
-        p3 = PulseStep(t2c(15e-9))
-        p4 = PulseStep(t2c(15e-9))  # HI
-        p5 = PulseStep(t2c(15e-9))
-        p6 = PulseStep(t2c(15e-9))  # HI
+        p2 = PulseStep(204 * 1000000)  # HI
+        p3 = PulseStep(204 * 1000000)
+        p4 = PulseStep(204 * 1000000)  # HI
+        p5 = PulseStep(204 * 1000000)
+        p6 = PulseStep(204 * 1000000)  # HI
 
         # Trigger to start pulse train
-        t = Trigger(t2c(400e-9))
+        t = Trigger(6 * 204 * 1000000)
 
         m.submodules += [
             pll,
@@ -74,7 +75,7 @@ class Top(Elaboratable):
 
         m.d.comb += [
             pll.clk_pin.eq(clk_pin),
-            t.trig_in.eq(con0),
+            t.trig_in.eq(C(1)),
             p1.input.eq(self.start),
             p1.prev.eq(t.trigger),
             p1.en.eq(t.trigger),
@@ -95,7 +96,7 @@ class Top(Elaboratable):
             p6.en.eq(t.trigger),
             con1.eq(p6.output),
 
-            led.eq(off),
+            led.eq(p6.output),
             led1.eq(off),
             led2.eq(off),
             led3.eq(off),
@@ -106,4 +107,4 @@ class Top(Elaboratable):
 
 if __name__ == '__main__':
     platform = ICEStickPlatform()
-    platform.build(Top(), do_program=False)
+    platform.build(Top(), do_program=True)

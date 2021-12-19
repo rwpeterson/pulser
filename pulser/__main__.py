@@ -6,9 +6,7 @@ import getopt
 import sys
 import os
 
-from .lib.pulsestep import PulseStep
-from .lib.pll import PLL
-from .lib.trigger import Trigger
+from pulser import PulseStep, PLL, Trigger
 
 
 def usage():

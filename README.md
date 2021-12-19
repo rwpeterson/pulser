@@ -101,7 +101,7 @@ pulse length, then a break of 25 cycles, and finally a second pulse of 15
 cycles, we specify the following. Let's assume for fun that we are using
 YoWASP, so we pass the `-y` flag too:
 
-    python3 -m pulse -f 204 -y 1 10 25 15
+    python3 -m pulser -f 204 -y 1 10 25 15
 
 The script will create a `build` directory containing build artifacts,
 and `pulser.bin`. This is what you want to flash the FPGA with. YoWASP
@@ -109,6 +109,17 @@ doesn't distribute `iceprog`, but a copy is in [fpga-binutils][f] (check
 the prebuilt binaries). You can have the script automatically flash the FPGA
 when it's done synthesizing by passing the `-u` flag.
 
+This example can be tested with an oscilloscope monitoring PMOD pin 2.
+The pulse sequence will trigger whenever a signal is on PMOD pin 1.
+Without a function generator? The probe cal 1 kHz signal on most scopes
+works for this in a pinch.
+
+## Blinking LED example
+
+An even simpler example that requires no test equipment simply flashes the
+LED three times on a one second period after reset, then stops:
+
+    python3 examples/blink.py
 
 ## Modules
 
