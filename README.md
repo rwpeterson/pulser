@@ -1,53 +1,42 @@
 # pulser
 
-Pulse generator for the IceStick FPGA eval board designed using nmigen.
+Pulse generator for the IceStick FPGA eval board designed using amaranth.
 
 ## Overview
 
-`pulser` is a set of nmigen modules and a script to dynamically generate
+`pulser` is a set of amaranth modules and a script to dynamically generate
 gateware implementing the specified pulse sequence. The FPGA is reflashed
 every time you want to change the sequence, which takes around ten seconds
 from script execution to operation.
 
 ## Installing
 
-### nmigen
+### amaranth
 
-You need the development version of [nmigen][n]. The easiest way
-to get started is to use `pip`.
+We need to install [amaranth][a], which is a Python library. See the
+[documentation][ad], but the simplest way to get it is with `pip`:
 
-Either install directly using `pip`:
+    pip3 install amaranth
 
-    pip3 install --user 'git+https://github.com/nmigen/nmigen.git#egg=nmigen'
-
-Or clone the repo and build locally:
-
-    git clone https://github.com/nmigen/nmigen
-    cd nmigen
-    pip3 install --user -e .
-
-Make sure to update it periodically!
-
-### nmigen-boards
+### amaranth-boards
 
 Board-specific platform information (like which pins are mapped to I/O,
 LEDs, etc.) is contributed by the community and packaged as a separate
-module, [nmigen-boards][nb]. For our purposes, we do not need the latest
-version, so we can install the last [release][nbp]:
+library, [amaranth-boards][ab].
 
-    pip3 install nmigen-boards
+    pip3 install amaranth-boards
 
 ### yosys
 
-Yosys is the open-source toolchain used to synthesize the design. It may
-be packaged for your distribution (check the version!), but the most
-foolproof way is to install via the [YoWASP][y] package. It uses `pip` to
-install versions of the tools compiled to WebAssembly. They will take longer
-to run the first time as they compile, and are slightly slower than native
-builds, but are cross-platform and easy to get.
+YOSYS is the open-source toolchain used to synthesize the design. It may
+be packaged for your distribution (Check the version! See amaranth docs),
+but the most foolproof way is to install via the [YoWASP][y] package.
+It uses `pip` to install versions of the tools compiled to WebAssembly.
+They will take longer to run the first time as they compile, and are slightly
+slower than native builds, but are cross-platform and easy to get.
 
 If you are using YoWASP, the binaries will be prepended with `yowasp-`.
-For nmigen to find them, environment variables need to be set. Without
+For amaranth to find them, environment variables need to be set. Without
 doing anything, you would need to type:
 
     YOSYS=yowasp-yosys NEXTPNR_ICE40=yowasp-nextpnr-ice40 ICEPACK=yowasp-icepack python3 -m pulser 1 1 1 1
@@ -92,9 +81,9 @@ when you run them directly:
 This will write `pulsestep.vcd` to the current directory, which you can view
 in gtkwave.
 
-[n]: https://github.com/nmigen/nmigen
-[nb]: https://github.com/nmigen/nmigen-boards
-[nbp]: https://pypi.org/project/nmigen-boards/
+[a]: https://github.com/amaranth-lang/amaranth
+[ab]: https://github.com/amaranth-lang/amaranth-boards
+[ad]: https://amaranth-lang.org/docs/amaranth/latest/
 [y]: http://yowasp.org
 [f]: https://github.com/sylefeb/fpga-binutils
 

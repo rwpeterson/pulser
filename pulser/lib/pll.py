@@ -1,7 +1,7 @@
-from nmigen import *
-from nmigen.lib.cdc import ResetSynchronizer
-from nmigen.cli import main
-from nmigen.sim import *
+from amaranth import *
+from amaranth.lib.cdc import ResetSynchronizer
+from amaranth.cli import main
+from amaranth.sim import *
 from collections import namedtuple
 import warnings
         
@@ -9,14 +9,14 @@ class PLL(Elaboratable):
     """Set the PLL to produce a higher-frequency clock.
 
     Currently, there is not a way to [express PLL primitives][i] directly in
-    nMigen. We use Instance to instantiate a Verilog module directly--in this
+    amaranth. We use Instance to instantiate a Verilog module directly--in this
     case the one produced by `icepll`.
 
     For reference, see the [Instance source][n], example implementations
     ([1][e1] and [2][e2]), and a [blog post] on adapting them to the ICEStick.
 
-    [i]: https://github.com/nmigen/nmigen/issues/425
-    [n]: https://github.com/nmigen/nmigen/blob/master/nmigen/hdl/ir.py
+    [i]: https://github.com/amaranth-lang/amaranth/issues/425
+    [n]: https://github.com/amaranth-lang/amaranth/blob/main/amaranth/hdl/ir.py
     [e1]: https://github.com/tpwrules/tasha_and_friends/blob/eventuator/tasha/gateware/icebreaker/pll.py
     [e2]: https://github.com/kbob/nmigen-examples/blob/master/nmigen_lib/pll.py
     [b]: http://41j.com/blog/2020/01/nmigen-pll-ice40hx8k-hx1k/

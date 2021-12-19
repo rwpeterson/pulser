@@ -1,6 +1,6 @@
-from nmigen import *
-from nmigen.cli import main
-from nmigen.sim import *
+from amaranth import *
+from amaranth.cli import main
+from amaranth.sim import *
 
 class Trigger(Elaboratable):
     """Monitor input for a rising edge.

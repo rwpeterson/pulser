@@ -1,7 +1,7 @@
 from collections import namedtuple
-from nmigen import *
-from nmigen.build import Resource, Pins
-from nmigen_boards.icestick import ICEStickPlatform
+from amaranth import *
+from amaranth.build import Resource, Pins
+from amaranth_boards.icestick import ICEStickPlatform
 import getopt
 import sys
 import os
